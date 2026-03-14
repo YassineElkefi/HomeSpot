@@ -1,13 +1,17 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { AppService } from './app.service';
-import { User } from './users/entities/user.entity';
-import { UsersModule } from './users/users.module';
 import { join } from 'path';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { AdvertsModule } from './adverts/adverts.module';
+
+import { User } from './users/entities/user.entity';
+import { Advert } from './adverts/entities/advert.entity';
 
 @Module({
   imports: [
@@ -20,22 +24,23 @@ import { AuthModule } from './auth/auth.module';
         host: config.get('DB_HOST', 'localhost'),
         port: config.get<number>('DB_PORT', 3306),
         username: config.get('DB_USERNAME', 'root'),
-        password: config.get('DB_PASSWORD', ''),
-        database: config.get('DB_NAME', 'real_estate'),
-        entities: [User],
-        synchronize: config.get('NODE_ENV') !== 'production',
+        password: config.get('DB_PASSWORD', 'Cloudy@2025'),
+        database: config.get('DB_NAME', 'HomeSpot'),
+        entities: [User, Advert],
+        synchronize: false,
         logging: config.get('NODE_ENV') === 'development',
-        charset: 'utf8mb4',
       }),
     }),
-
+    
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
 
     AuthModule,
-    UsersModule,],
+    AdvertsModule,
+    UsersModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

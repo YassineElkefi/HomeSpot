@@ -1,9 +1,11 @@
+import { Advert } from 'src/adverts/entities/advert.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 export enum UserRole {
@@ -48,6 +50,9 @@ export class User {
     default: false,
   })
   disabled: boolean;
+
+  @OneToMany(() => Advert, (advert) => advert.createdBy)
+  adverts: Advert[];
 
   @CreateDateColumn({
     type: 'timestamp',
