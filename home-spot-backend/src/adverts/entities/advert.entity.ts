@@ -1,25 +1,24 @@
+// advert.entity.ts
+
 import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
+  Entity, PrimaryGeneratedColumn, Column,
+  CreateDateColumn, UpdateDateColumn,
+  ManyToOne, JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-export enum AdType {
-  SALE = 'Sale',
-  RENT = 'Rent',
+export enum AdType { SALE = 'Sale', RENT = 'Rent' }
+export enum EstateType {
+  APARTMENT = 'Apartment', HOUSE = 'House',
+  OFFICE = 'Office', FIELD = 'Field',
 }
 
-export enum EstateType {
-  APARTMENT = 'Apartment',
-  HOUSE = 'House',
-  OFFICE = 'Office',
-  FIELD = 'Field',
-}
+// Reusable transformer — converts decimal strings to floats on read
+const toFloat = {
+  to: (value: number) => value,
+  from: (value: string | number | null) =>
+    value === null ? null : parseFloat(value as string),
+};
 
 @Entity('adverts')
 export class Advert {
@@ -35,7 +34,7 @@ export class Advert {
   @Column({ type: 'enum', enum: EstateType })
   estateType: EstateType;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, transformer: toFloat }) // ← add transformer
   surfaceArea: number;
 
   @Column({ type: 'int', nullable: true })
@@ -44,15 +43,14 @@ export class Advert {
   @Column({ length: 100 })
   location: string;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, transformer: toFloat }) // ← add transformer
   price: number;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   imageURL: string | null;
 
   @ManyToOne(() => User, (user) => user.adverts, {
-    nullable: true,
-    onDelete: 'SET NULL',
+    nullable: true, onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'createdById' })
   createdBy: User | null;
