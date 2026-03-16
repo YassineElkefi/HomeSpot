@@ -1,98 +1,197 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# HomeSpot — Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS REST API for the HomeSpot real estate platform.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Tech Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Package | Purpose |
+|---|---|
+| NestJS | Framework |
+| TypeORM | ORM |
+| MySQL | Database |
+| JWT + Passport | Authentication |
+| bcrypt | Password hashing |
+| multer | Image uploads to local disk |
 
-## Project setup
+---
+
+## Setup
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env    # fill in your credentials
+npm run start:dev
 ```
 
-## Compile and run the project
+---
+
+## Environment Variables
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=yourpassword
+DB_NAME=HomeSpot
+
+JWT_SECRET=<64+ random hex chars>
+JWT_EXPIRES_IN=7d
+
+UPLOAD_DIR=./uploads
+PORT=3000
+NODE_ENV=development
+```
+
+Generate a secure `JWT_SECRET`:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
-## Run tests
+---
+
+## Database
+
+Tables are **auto-created** by TypeORM on first run (`synchronize: true` in dev).
+
+| Table | Key Columns |
+|---|---|
+| `users` | id, email, password *(hashed)*, displayName, role `user\|admin`, disabled |
+| `adverts` | id, description, adType, estateType, surfaceArea, nbRooms, location, price, imageURL, createdById |
+
+> ⚠️ Set `synchronize: false` before going to production and use TypeORM migrations instead.
+
+### First-time setup
+
+1. Open phpMyAdmin → **New** → name: `HomeSpot` · collation: `utf8mb4_unicode_ci` → **Create**
+2. Start the server — tables appear automatically
+3. Seed the first admin user:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+ADMIN_EMAIL=admin@homespot.tn \
+ADMIN_PASSWORD=Admin1234! \
+npx ts-node scripts/seed-admin.ts
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## API Reference
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Auth
 
-```bash
-$ npm install -g mau
-$ mau deploy
+All endpoints are public except `/auth/me` and `/auth/set-role`.
+
+| Method | Path | Auth | Body | Returns |
+|---|---|---|---|---|
+| `POST` | `/auth/register` | Public | `{ name, email, password }` | `{ access_token, user }` |
+| `POST` | `/auth/login` | Public | `{ email, password }` | `{ access_token, user }` |
+| `GET` | `/auth/me` | JWT | — | Current user |
+| `POST` | `/auth/set-role` | Admin | `{ email, role }` | Confirmation |
+
+### Adverts
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/adverts` | Public | Paginated list with filters |
+| `GET` | `/adverts/:id` | Public | Single advert |
+| `POST` | `/adverts` | Admin | Create — `multipart/form-data` |
+| `PUT` | `/adverts/:id` | Admin | Update — `multipart/form-data` |
+| `DELETE` | `/adverts/:id` | Admin | Delete + removes image from disk |
+
+#### `GET /adverts` — Query Parameters
+
+```
+q             string   Full-text search (description, location, type)
+adType        string   Sale | Rent
+estateType    string   Apartment | House | Office | Field
+location      string   Exact city name
+minPrice      number
+maxPrice      number
+minSurface    number   m²
+maxSurface    number   m²
+page          number   default: 1
+limit         number   default: 20
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Response shape:
 
-## Resources
+```json
+{
+  "data": [ ...adverts ],
+  "meta": { "total": 142, "page": 1, "limit": 20, "totalPages": 8 }
+}
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+#### `POST` / `PUT` `/adverts` — Form Fields
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```
+description   string    required
+adType        string    "Sale" | "Rent"
+estateType    string    "Apartment" | "House" | "Office" | "Field"
+surfaceArea   number
+nbRooms       number    omit for Field listings
+location      string    one of the 10 supported Tunisian cities
+price         number
+image         file      JPEG · PNG · WebP · max 5 MB (optional)
+```
 
-## Support
+### Users *(admin only)*
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/users` | List all users |
+| `GET` | `/users/:id` | User + their adverts |
+| `PATCH` | `/users/:id` | Update `displayName` / `disabled` |
+| `DELETE` | `/users/:id` | Delete user |
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Image Uploads
 
-## License
+Images are saved to `./uploads/` and served as static files:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```
+POST /adverts  { image: <file> }
+  → disk:  ./uploads/550e8400-e29b-41d4-a716-446655440000.jpg
+  → DB:    imageURL = "/uploads/550e8400-…jpg"
+  → URL:   http://192.168.1.x:3000/uploads/550e8400-…jpg
+```
+
+- `PUT` with a new image **automatically deletes** the old file.
+- `DELETE` on an advert **automatically deletes** its image file.
+
+> **Decimal columns:** `surfaceArea` and `price` use a TypeORM column transformer
+> to return MySQL `DECIMAL` values as `number` instead of strings.
+
+---
+
+## Auth Flow
+
+```
+Client                            NestJS
+  │                                 │
+  ├── POST /auth/login ────────────>│
+  │   { email, password }           │  bcrypt.compare → jwt.sign
+  │<── { access_token, user } ──────┤
+  │                                 │
+  ├── GET /adverts ────────────────>│  No token required
+  │<── { data[], meta } ────────────┤
+  │                                 │
+  ├── POST /adverts ───────────────>│  Authorization: Bearer <token>
+  │   multipart/form-data           │  JwtAuthGuard → AdminGuard
+  │<── Created advert ──────────────┤
+```
+
+---
+
+## Production Checklist
+
+- [ ] Set `NODE_ENV=production` and `synchronize: false` in TypeORM config
+- [ ] Run `npm run build` and deploy `dist/` + `uploads/` to your server
+- [ ] Use `pm2` to keep the process alive
+- [ ] Put Nginx in front to serve `/uploads/` as static files directly
+- [ ] Store `JWT_SECRET` in a secrets manager — never commit it
+- [ ] Set up regular MySQL backups (`mysqldump` or phpMyAdmin export)
+- [ ] Tighten CORS `origin` to your production domain
